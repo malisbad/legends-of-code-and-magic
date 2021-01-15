@@ -26,17 +26,27 @@ fn main() {
             let player_mana = parse_input!(inputs[1], i32);
             let player_deck = parse_input!(inputs[2], i32);
             let player_rune = parse_input!(inputs[3], i32);
+            let player_draw = parse_input!(inputs[4], i32);
             players.push(player::Player {
                 player_health,
                 player_mana,
                 player_deck,
                 player_rune,
+                player_draw
             });
         }
-        
+
         let mut input_line = String::new();
         io::stdin().read_line(&mut input_line).unwrap();
-        let opponent_hand = parse_input!(input_line, i32);
+        let inputs = input_line.split(" ").collect::<Vec<_>>();
+        let opponent_hand = parse_input!(inputs[0], i32);
+        let opponent_actions = parse_input!(inputs[1], i32);
+        for i in 0..opponent_actions as usize {
+            let mut input_line = String::new();
+            io::stdin().read_line(&mut input_line).unwrap();
+            let card_number_and_action = input_line.trim_matches('\n').to_string();
+        }
+        
         let mut input_line = String::new();
         io::stdin().read_line(&mut input_line).unwrap();
         let card_count = parse_input!(input_line, i32);
@@ -135,6 +145,10 @@ mod card {
             return ((self.attack + self.defense) / cmp::max(self.cost, 1)) as f64;
         }
     }
+
+    trait Iterator {
+        fn next(&mut self) -> Option<Card>;
+    }
 }
 
 mod player {
@@ -144,27 +158,28 @@ mod player {
         pub player_mana: i32,
         pub player_deck: i32,
         pub player_rune: i32,
+        pub player_draw: i32
     }
 }
 
 mod game_turn {
-    use player;
-    use card;
+    use crate::player;
+    use crate::card;
 
     pub fn start(players: Vec<player::Player>, cards: Vec<card::Card>) {
         let mut opponent_board: Vec<&card::Card> =  cards.iter().filter(|card| card.location == -1).collect();
         let mut board: Vec<&card::Card> = cards.iter().filter(|card| card.location == 1).collect();
         let mut hand: Vec<&card::Card> = cards.iter().filter(|card| card.location == 0).collect();
 
-        let user = players[0];
-        let opponent = players[1];
+        let user = &players[0];
+        let opponent = &players[1];
 
         let mut play = String::new();
 
         let playable: Vec<&card::Card> = hand
-            .iter()
+            .into_iter()
             .filter(|card| card.cost <= user.player_mana)
-            .collect();
+            .collect::<Vec<&card::Card>>();
         play.push_str(&format!("{}", pure_efficiency_play(&players[0], playable)));
         play.push_str(&format!("{}", full_face_attack(board)));
 
@@ -179,8 +194,8 @@ mod game_turn {
         let mut summon_string = String::new();
         let mut current_mana = player.player_mana;
         
-        while (current_mana != 0) {
-            for card in playable as card::Card {
+        while (current_mana >= 0) {
+            for card in &playable {
                 if (current_mana == card.cost) {
                     summon_string.push_str(&format!("{};", card.play()));
                     current_mana = current_mana - card.cost;
@@ -197,9 +212,9 @@ mod game_turn {
     }
 
     fn full_face_attack(board: Vec<&card::Card>) -> String {
-        let attack_string = String::new();
-        for card in board as card::Card {
-            attack_string.push_str(&format!("{};", card.attack()));
+        let mut attack_string = String::new();
+        for card in board {
+            attack_string.push_str(&format!("{};", card.attack(-1)));
         }
         return attack_string;
     }
